@@ -21,37 +21,42 @@ resource "aws_iam_role_policy_attachment" "example-AmazonEKSClusterPolicy" {
   role       = aws_iam_role.example.name
 }
 
-#get vpc data
+# get vpc data
 data "aws_vpc" "default" {
   default = true
 }
+
 # Exclude us-east-1e
 data "aws_availability_zones" "available" {
   exclude_names = ["us-east-1e"]
   state         = "available"
 }
-#get public subnets for cluster
+
+# get public subnets for cluster
 data "aws_subnets" "public" {
+  for_each = toset(data.aws_availability_zones.available.names)
+
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+
+  filter {
+    name   = "availability-zone-id"
+    values = [each.value]
+  }
 }
-#cluster provision
+
+# cluster provision
 resource "aws_eks_cluster" "example" {
   name     = "EKS_CLOUD"
   role_arn = aws_iam_role.example.arn
 
   vpc_config {
-    subnet_ids = data.aws_subnets.public.ids
+    subnet_ids = values(data.aws_subnets.public)[*].ids
   }
-
-  # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
-  # Otherwise, EKS will not be able to properly delete EKS managed EC2 infrastructure such as Security Groups.
-  depends_on = [
-    aws_iam_role_policy_attachment.example-AmazonEKSClusterPolicy,
-  ]
 }
+
 
 resource "aws_iam_role" "example1" {
   name = "eks-node-group-cloud"
