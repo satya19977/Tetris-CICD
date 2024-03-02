@@ -31,8 +31,8 @@ data "aws_subnets" "public" {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
-}
-filter {
+
+  filter {
     name   = "availability-zone-id"
     values = ["use1-az1", "use1-az2", "use1-az4", "use1-az6"]
   }
